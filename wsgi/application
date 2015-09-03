@@ -50,25 +50,25 @@ class MyBackend(occi_ext.Backend):
             state, stack_id, stack_output = self.so.so_e.state()
             entity.attributes['occi.mcn.stack.state'] = state
             entity.attributes['occi.mcn.stack.id'] = stack_id
-            for kv in stack_output:
-                entity.attributes[kv['output_key']] = kv['output_value']
+            if stack_output is not None:
+                for kv in stack_output:
+                    entity.attributes[kv['output_key']] = kv['output_value']
 
     def update(self, old, new, extras):
         # TODO: attributes would need to be defined by a mixin.
         old.attributes.update(new.attributes)
-        self.so.so_e.update(old)
+        self.so.so_e.update(old, new, extras)
 
     def delete(self, entity, extras):
         self.so.so_e.dispose()
 
     # Actions
-
     def deploy_me(self, entity, attributes, extras):
-        self.so.so_e.deploy()
+        self.so.so_e.deploy(attributes)
         entity.actions = [occi_ext.PROVISION_ACTION]
 
     def provision_me(self, entity, attributes, extras):
-        self.so.so_e.provision()
+        self.so.so_e.provision(attributes)
         entity.actions = []
 
 application = occi_ext.Application(MyBackend())

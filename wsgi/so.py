@@ -17,33 +17,24 @@
 Sample SO.
 """
 
-import logging
 import os
 import threading
 
 from sdk.mcn import util
+from sm.so import service_orchestrator
+from sm.so.service_orchestrator import LOG
 
 HERE = os.environ['OPENSHIFT_REPO_DIR']
 
 
-def config_logger(log_level=logging.DEBUG):
-    logging.basicConfig(format='%(threadName)s \t %(levelname)s %(asctime)s: \t%(message)s',
-                        datefmt='%m/%d/%Y %I:%M:%S %p',
-                        log_level=log_level)
-    logger = logging.getLogger(__name__)
-    logger.setLevel(log_level)
-    return logger
-
-LOG = config_logger()
-
-
-class ServiceOrchestratorExecution():
+class SOE(service_orchestrator.Execution):
     """
     Sample SO execution part.
     """
     def __init__(self, token, tenant, ready_event):
+        super(SOE, self).__init__(token, tenant)
         self.token = token
-        self.tenant_name = tenant
+        self.tenant = tenant
         self.event = ready_event
         f = open(os.path.join(HERE, 'data', 'test.yaml'))
         self.template = f.read()
@@ -51,29 +42,39 @@ class ServiceOrchestratorExecution():
         self.stack_id = None
         self.deployer = util.get_deployer(self.token,
                                           url_type='public',
-                                          tenant_name=self.tenant_name)
+                                          tenant_name=self.tenant)
 
     def design(self):
         """
         Do initial design steps here.
         """
         LOG.debug('Executing design logic')
+        self.resolver.design()
 
-    def deploy(self):
+    def deploy(self, attributes=None):
         """
         deploy SICs.
         """
+        LOG.debug('Deploy service dependencies')
+        self.resolver.deploy()
         LOG.debug('Executing deployment logic')
         if self.stack_id is None:
             self.stack_id = self.deployer.deploy(self.template, self.token)
+            LOG.info('Resource dependencies - stack id: ' + self.stack_id)
 
-    def provision(self):
+    def provision(self, attributes=None):
         """
         (Optional) if not done during deployment - provision.
         """
+
+        self.resolver.provision()
+        LOG.info('Now I can provision my resources once my resources are created. Service info:')
+        LOG.info(self.resolver.service_inst_endpoints)
+
         # TODO add you provision phase logic here
-        #
-        LOG.debug('Executing provisioning logic')
+        # XXX note that provisioning of external services must happen before resource provisioning
+
+        LOG.debug('Executing resource provisioning logic')
         # once logic executes, deploy phase is done
         self.event.set()
 
@@ -81,8 +82,11 @@ class ServiceOrchestratorExecution():
         """
         Dispose SICs.
         """
-        LOG.debug('Executing disposal logic')
+        LOG.info('Disposing of 3rd party service instances...')
+        self.resolver.dispose()
+
         if self.stack_id is not None:
+            LOG.info('Disposing of resource instances...')
             self.deployer.dispose(self.stack_id, self.token)
             self.stack_id = None
         # TODO on disposal, the SOE should notify the SOD to shutdown its thread
@@ -91,7 +95,13 @@ class ServiceOrchestratorExecution():
         """
         Report on state.
         """
-        LOG.debug('Executing state retrieval logic')
+
+        # TODO ideally here you compose what attributes should be returned to the SM
+        # In this case only the state attributes are returned.
+        resolver_state = self.resolver.state()
+        LOG.info('Resolver state:')
+        LOG.info(resolver_state.__repr__())
+
         if self.stack_id is not None:
             tmp = self.deployer.details(self.stack_id, self.token)
 
@@ -99,21 +109,26 @@ class ServiceOrchestratorExecution():
         else:
             return 'Unknown', 'N/A'
 
-    # This is not part of the SOE interface
-    def update(self, updated_service):
-        # TODO implement your own update logic - this could be a heat template update call
+    def update(self, old, new, extras):
+        # TODO implement your own update logic - this could be a heat template update call - not to be confused
+        # with provisioning
         pass
 
+    def notify(self, entity, attributes, extras):
+        super(SOE, self).notify(entity, attributes, extras)
+        # TODO here you can add logic to handle a notification event sent by the CC
+        # XXX this is optional
 
-class ServiceOrchestratorDecision(threading.Thread):
+class SOD(service_orchestrator.Decision, threading.Thread):
     """
     Sample Decision part of SO.
     """
 
-    def __init__(self, so_e, token, ready_event):
-        super(ServiceOrchestratorDecision, self).__init__()
+    def __init__(self, so_e, token, tenant, ready_event):
+        super(SOD, self).__init__()
         self.so_e = so_e
         self.token = token
+        self.tenant = tenant
         self.event = ready_event
 
     def run(self):
@@ -126,7 +141,10 @@ class ServiceOrchestratorDecision(threading.Thread):
         self.event.wait()
         LOG.debug('Starting runtime logic...')
         # TODO implement you runtime logic here - you should probably release the locks afterwards, maybe in stop ;-)
+        # XXX note you could use the runtime functionality of the CC - just a hint ;-)
 
+    def stop(self):
+        pass
 
 class ServiceOrchestrator(object):
     """
@@ -136,7 +154,26 @@ class ServiceOrchestrator(object):
     def __init__(self, token, tenant):
         # this python thread event is used to notify the SOD that the runtime phase can execute its logic
         self.event = threading.Event()
-        self.so_e = ServiceOrchestratorExecution(token, tenant, self.event)
-        self.so_d = ServiceOrchestratorDecision(self.so_e, token, self.event)
+        self.so_e = SOE(token=token, tenant=tenant, ready_event=self.event)
+        self.so_d = SOD(so_e=self.so_e, tenant=tenant, token=token, ready_event=self.event)
         LOG.debug('Starting SOD thread...')
         self.so_d.start()
+
+
+# basic test
+if __name__ == '__main__':
+
+    token = 'e383301a2ae5492ba168a9e50968eecd'
+    tenant = 'edmo'
+
+    soe = SOE(token, tenant)
+    soe.design()
+    soe.deploy()
+    soe.provision()
+
+    # LOG.info('instantiated service dependencies: ' + res.service_inst_endpoints.__repr__())
+    # # LOG.info('instantiated resource dependencies (heat stack id): ' + res.stack_id)
+    # stack_output = res.state()
+    # LOG.info('stack output: ' + stack_output.__repr__())
+
+    soe.dispose()
