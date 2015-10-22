@@ -69,7 +69,11 @@ class MyBackend(occi_ext.Backend):
 
     def provision_me(self, entity, attributes, extras):
         self.so.so_e.provision(attributes)
-        entity.actions = []
+        entity.actions = [occi_ext.NOTIFY_ACTION]
+
+    def notify_me(self, entity, attributes, extras):
+        self.so.so_e.notify(entity, attributes, extras)
+        entity.actions = [occi_ext.NOTIFY_ACTION]
 
 application = occi_ext.Application(MyBackend())
 
@@ -78,6 +82,6 @@ application = occi_ext.Application(MyBackend())
 #
 if __name__ == '__main__':
     from wsgiref.simple_server import make_server
-    httpd = make_server('localhost', 8051, application)
+    httpd = make_server('0.0.0.0', 8051, application)
     # Wait for a single request, serve it and quit.
     httpd.serve_forever()
