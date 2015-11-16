@@ -19,11 +19,11 @@ Setuptools script.
 from setuptools import setup
 
 setup(name='sample_so',
-      version='0.2',
+      version='0.3',
       description='Sample SO',
-      author='Intel Performance Learning Solutions Ltd, Intel Corporation.',
-      author_email='thijs.metsch@intel.com',
+      author='',
+      author_email='dudo@zhaw.ch',
       url='http://www.intel.com',
       license='Apache 2.0',
-      packages=['wsgi', 'mcn_cc_sdk'],
+      # packages=['wsgi', 'mcn_cc_sdk'],
 )

@@ -25,19 +25,21 @@ from sdk.mcn import util
 from sdk.mcn import runtime
 from sm.so import service_orchestrator
 from sm.so.service_orchestrator import LOG
+from sm.so.service_orchestrator import BUNDLE_DIR
 
-HERE = os.environ['OPENSHIFT_REPO_DIR']
+HERE = BUNDLE_DIR
 
 
 class SOE(service_orchestrator.Execution):
     """
     Sample SO execution part.
     """
-    def __init__(self, token, tenant, ready_event):
+    def __init__(self, token, tenant, ready_event, **kwargs):
         super(SOE, self).__init__(token, tenant)
         self.token = token
         self.tenant = tenant
         self.event = ready_event
+        self.app_url = kwargs.get('app_url', '')
         f = open(os.path.join(HERE, 'data', 'one-vm.yaml'))
         self.template = f.read()
         f.close()
@@ -61,14 +63,14 @@ class SOE(service_orchestrator.Execution):
         Do initial design steps here.
         """
         LOG.debug('Executing design logic')
-        self.resolver.design()
+        # self.resolver.design()
 
     def deploy(self, attributes=None):
         """
         deploy SICs.
         """
-        LOG.debug('Deploy service dependencies')
-        self.resolver.deploy()
+        # LOG.debug('Deploy service dependencies')
+        # self.resolver.deploy()
         LOG.debug('Executing deployment logic')
         if self.stack_id is None:
 
@@ -88,8 +90,10 @@ class SOE(service_orchestrator.Execution):
 
             self.stack_id = self.deployer.deploy(self.template, self.token, parameters=params)
             # need a way to get local SO url from opsv3 to setup a notification url
-            n_name, n_id = rt.notify('(avg(cpu.user_perc{service=' + self.service + ',hostname=host1}) > 100)', 'http://160.85.4.103:8051/orchestrator/default',
-                                     runtime.ACTION_UNDETERMINED)
+            notification_url = self.app_url
+            notification_url = 'http://160.85.4.103:8051/orchestrator/default'
+            n_name, n_id = rt.notify('(avg(cpu.user_perc{service=' + self.service + ',hostname=host1}) > 100)',
+                                     notification_url, runtime.ACTION_UNDETERMINED)
             self.mon_not[n_name] = "replace_host1"
             self.mon_not_ids.append(n_id)
             LOG.debug("created alarm: " + n_name + " with id: " + n_id + " and action: " + self.mon_not[n_name])
@@ -119,8 +123,8 @@ class SOE(service_orchestrator.Execution):
         """
         Dispose SICs.
         """
-        LOG.info('Disposing of 3rd party service instances...')
-        self.resolver.dispose()
+        # LOG.info('Disposing of 3rd party service instances...')
+        # self.resolver.dispose()
 
         if self.stack_id is not None:
             LOG.info('Disposing of resource instances...')
@@ -206,45 +210,22 @@ class SOE(service_orchestrator.Execution):
                     LOG.debug("TEMPLATE UPDATED!")
 
 
-# class SOD(service_orchestrator.Decision, threading.Thread):
-#     """
-#     Sample Decision part of SO.
-#     """
-#
-#     def __init__(self, so_e, token, tenant, ready_event):
-#         super(SOD, self).__init__(so_e, token, tenant)
-#         self.so_e = so_e
-#         self.token = token
-#         self.tenant = tenant
-#         self.event = ready_event
-#
-#     def run(self):
-#         """
-#         Decision part implementation goes here.
-#         """
-#         # it is unlikely that logic executed will be of any use until the provisioning phase has completed
-#
-#         LOG.debug('Waiting for deploy and provisioning to finish')
-#         self.event.wait()
-#         LOG.debug('Starting runtime logic...')
-#         # TODO implement you runtime logic here - you should probably release the locks afterwards, maybe in stop ;-)
-#         # XXX note you could use the runtime functionality of the CC - just a hint ;-)
-#
-#     def stop(self):
-#         pass
-
 class ServiceOrchestrator(object):
     """
     Sample SO.
     """
 
-    def __init__(self, token, tenant):
+    def __init__(self, token, tenant, **kwargs):
         # this python thread event is used to notify the SOD that the runtime phase can execute its logic
         self.event = threading.Event()
-        self.so_e = SOE(token=token, tenant=tenant, ready_event=self.event)
-        # self.so_d = SOD(so_e=self.so_e, tenant=tenant, token=token, ready_event=self.event)
-        # LOG.debug('Starting SOD thread...')
-        # self.so_d.start()
+        app_url = kwargs.get('app_url', '')
+        LOG.debug('app_url callback: ' + app_url)
+        if len(app_url) > 0:
+            self.so_e = SOE(token=token, tenant=tenant, ready_event=self.event, app_url=app_url)
+        else:
+            self.so_e = SOE(token=token, tenant=tenant, ready_event=self.event)
+
+        # XXX there is no SOD for this SO as that functionality is delegated to the CC's RT component
 
 
 # basic test
@@ -253,7 +234,7 @@ if __name__ == '__main__':
     token = 'e383301a2ae5492ba168a9e50968eecd'
     tenant = 'edmo'
 
-    soe = SOE(token, tenant)
+    soe = SOE(token, tenant, threading.Event())
     soe.design()
     soe.deploy()
     soe.provision()
