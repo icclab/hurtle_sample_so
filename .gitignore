@@ -6,3 +6,4 @@ sdist/
 .idea/
 *.pyc
 *.egg-info
+.openshift/

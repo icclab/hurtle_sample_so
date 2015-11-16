@@ -1,3 +1,7 @@
+# Using the reactive SO and Notifications
+
+Please see the [README_notify.md](README_notify.md) on this.
+
 # Testing SO without deploying it using CC
 
 Goto the directory of mcn_cc_sdk & setup virtenv (Note: could be done easier):
@@ -35,6 +39,7 @@ Initialize the SO:
           -H 'Category: orchestrator; scheme="http://schemas.mobile-cloud-networking.eu/occi/service#"' \
           -H 'X-Auth-Token: '$KID \
           -H 'X-Tenant-Name: '$TENANT
+          -H 'X-OCCI-Attribute': 'occi.mcn.app.url="http://localhost:8080/orchestrator/default"'
 
 Get state of the SO + service instance:
 

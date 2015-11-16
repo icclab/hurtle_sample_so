@@ -37,7 +37,7 @@ class SOE(service_orchestrator.Execution):
         self.token = token
         self.tenant = tenant
         self.event = ready_event
-        self.app_url = kwargs.get('app_url', '')
+        self.app_url = kwargs.get('app_url', 'http://localhost:8080/orchestrator/default')
         f = open(os.path.join(HERE, 'data', 'one-vm.yaml'))
         self.template = f.read()
         f.close()
@@ -145,9 +145,9 @@ class SOE(service_orchestrator.Execution):
 
         # TODO ideally here you compose what attributes should be returned to the SM
         # In this case only the state attributes are returned.
-        resolver_state = self.resolver.state()
-        LOG.info('Resolver state:')
-        LOG.info(resolver_state.__repr__())
+        # resolver_state = self.resolver.state()
+        # LOG.info('Resolver state:')
+        # LOG.info(resolver_state.__repr__())
 
         if self.stack_id is not None:
             tmp = self.deployer.details(self.stack_id, self.token)
@@ -172,9 +172,6 @@ class SOE(service_orchestrator.Execution):
         except KeyError:
             raise ValueError("Notify action missing notification.alarm_name OCCI attribute")
         LOG.debug("Alarm name is: " + alarm_name)
-
-        # self.template_obj.get('outputs').get('mcn.endpoint.enodeb')['value']='99999999'
-        # template_updated = yaml.dump(self.template_obj)
 
         LOG.debug('updating template!')
         if alarm_name in self.mon_not:

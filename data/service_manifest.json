@@ -6,12 +6,5 @@
         "mcn.endpoint.p4": "immutable"
     },
     "service_endpoint": "http://127.0.0.1:8888/test-runtime/",
-    "depends_on": [],
-    "resources": [
-        {
-            "http://schemas.mobile-cloud-networking.eu/occi/service#cc": {
-                "uri": "file:///root/my/bundle/data/itg.yaml"
-            }
-        }
-    ]
+    "depends_on": []
 }
