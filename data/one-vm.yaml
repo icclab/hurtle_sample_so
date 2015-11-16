@@ -24,6 +24,11 @@ parameters:
     description: Server image id to use
     default: monasca-agent-ubu14.04
 
+  hostname:
+    type: string
+    description: name of the host
+    default: host1
+
   flavor:
     description: Server flavor id to use
     type: string
@@ -101,7 +106,7 @@ resources:
   rcb_si:
     type: OS::Nova::Server
     properties:
-      name: host1
+      name: {get_param: hostname}
       image: { get_param: image }
       flavor: { get_param: flavor }
       key_name: { get_param: sshkey }

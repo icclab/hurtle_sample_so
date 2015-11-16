@@ -31,9 +31,7 @@ HERE = BUNDLE_DIR
 
 
 class SOE(service_orchestrator.Execution):
-    """
-    Sample SO execution part.
-    """
+
     def __init__(self, token, tenant, ready_event, **kwargs):
         super(SOE, self).__init__(token, tenant)
         self.token = token
@@ -52,6 +50,7 @@ class SOE(service_orchestrator.Execution):
         self.mon_user = self.mon_pass = self.mon_id = None
         self.mon_not = dict()
         self.mon_not_ids = []
+        self.hostname = 'host1'  # the name of the host we'll monitor
         self.service = 'IAMSERVICE4'
         # as resource are renamed when template is updated to recreate a resource,
         #    one needs to keep track of mappings between original name
@@ -87,12 +86,13 @@ class SOE(service_orchestrator.Execution):
             params['password'] = self.mon_pass
             params['tenant'] = self.tenant
             params['service_id'] = self.service
+            params['hostname'] = self.hostname
 
             self.stack_id = self.deployer.deploy(self.template, self.token, parameters=params)
             # need a way to get local SO url from opsv3 to setup a notification url
             notification_url = self.app_url
-            notification_url = 'http://160.85.4.103:8051/orchestrator/default'
-            n_name, n_id = rt.notify('(avg(cpu.user_perc{service=' + self.service + ',hostname=host1}) > 100)',
+            n_name, n_id = rt.notify('(avg(cpu.user_perc{service=' + self.service +
+                                     ',hostname='+self.hostname+'}) > 100)',
                                      notification_url, runtime.ACTION_UNDETERMINED)
             self.mon_not[n_name] = "replace_host1"
             self.mon_not_ids.append(n_id)
@@ -231,17 +231,11 @@ class ServiceOrchestrator(object):
 # basic test
 if __name__ == '__main__':
 
-    token = 'e383301a2ae5492ba168a9e50968eecd'
-    tenant = 'edmo'
+    token = ''
+    tenant = ''
 
     soe = SOE(token, tenant, threading.Event())
     soe.design()
     soe.deploy()
     soe.provision()
-
-    # LOG.info('instantiated service dependencies: ' + res.service_inst_endpoints.__repr__())
-    # # LOG.info('instantiated resource dependencies (heat stack id): ' + res.stack_id)
-    # stack_output = res.state()
-    # LOG.info('stack output: ' + stack_output.__repr__())
-
     soe.dispose()
