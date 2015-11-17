@@ -152,9 +152,9 @@ class SOE(service_orchestrator.Execution):
         if self.stack_id is not None:
             tmp = self.deployer.details(self.stack_id, self.token)
 
-            return tmp['state'], self.stack_id, tmp['output']
+            return tmp.get('state', 'Unknown'), self.stack_id, tmp.get('output', [])
         else:
-            return 'Unknown', 'N/A'
+            return 'Unknown', 'N/A', []
 
     def update(self, old, new, extras):
         # TODO implement your own update logic - this could be a heat template update call - not to be confused

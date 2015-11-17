@@ -5,6 +5,6 @@
         "mcn.endpoint.p3": "immutable",
         "mcn.endpoint.p4": "immutable"
     },
-    "service_endpoint": "http://127.0.0.1:8888/test-runtime/",
+    "service_endpoint": "http://127.0.0.1:8080/test-runtime/",
     "depends_on": []
 }
