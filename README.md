@@ -1,21 +1,25 @@
 # Testing SO without deploying it using CC
+## Installation Guide
 
-Goto the directory of mcn_cc_sdk & setup virtenv (Note: could be done easier):
+The following instructions have been verified with the docker image centos:7.
 
-    $ virtualenv /tmp/mcn_test_virt
-    $ source /tmp/mcn_test_virt/bin/activate
+	yum install epel-release -y 
+	yum install gcc python-devel python-pip git python-virtualenv -y 
+	cd /opt 
+	virtualenv /opt/venv/hurtle/so 
+	source /opt/venv/hurtle/so/bin/activate 
+	git clone https://github.com/icclab/hurtle_cc_sdk.git
+	git clone https://github.com/icclab/hurtle_sample_so.git
+	git clone https://github.com/icclab/hurtle_sm.git
+	cd hurtle_sm ; 	python setup.py install ; cd ..
+	cd hurtle_cc_sdk ; python setup.py install ; cd ..
 
-Install SDK and required packages:
 
-    $ pip install pbr six iso8601 babel requests python-heatclient==0.2.9 python-keystoneclient
-    $ python setup.py install  # in the mcn_cc_sdk directory.
+Start the SO locally with:
 
-Run SO:
-
-    $ export OPENSHIFT_PYTHON_DIR=/tmp/mcn_test_virt
-    $ export OPENSHIFT_REPO_DIR=<path to sample so>
-    $ python ./wsgi/application
-
+	cd hurtle_sample_so
+	OPENSHIFT_PYTHON_DIR=/opt/venv/hurtle/so OPENSHIFT_REPO_DIR=$PWD python ./wsgi/application
+	
 Optionally you can also set the DESIGN_URI if your OpenStack install is not local.
 
 In a new terminal do get a token from keystone (token must belong to a user which has the admin role for the tenant):
