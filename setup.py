@@ -25,5 +25,5 @@ setup(name='sample_so',
       author_email='thijs.metsch@intel.com',
       url='http://www.intel.com',
       license='Apache 2.0',
-      packages=['wsgi', 'mcn_cc_sdk'],
+      packages=[],
 )
