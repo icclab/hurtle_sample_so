@@ -1,5 +1,4 @@
 #   Copyright (c) 2013-2015, Intel Performance Learning Solutions Ltd, Intel Corporation.
-#   Copyright 2015 Zuercher Hochschule fuer Angewandte Wissenschaften
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -22,65 +21,181 @@ import os
 from sdk.mcn import util
 from sm.so import service_orchestrator
 from sm.so.service_orchestrator import LOG
-from sm.so.service_orchestrator import BUNDLE_DIR
+
+import hashlib
+import json
+import urllib2
+import yaml
 
 
-class SOE(service_orchestrator.Execution):
+class SOEExtn(service_orchestrator.Execution):
+
+    def __init__(self, token, tenant, **kwargs):
+        """
+        This will setup heat clients and associated resource manifests per region
+        """
+        super(SOEExtn, self).__init__(token, tenant, **kwargs)
+        self.token = token
+        self.tenant = tenant
+        extras = kwargs.get('extras', None)
+        self.service_manifest = self.__service_manifest(extras)
+        # self.deployer = {}
+        # self.deployer = self.__deployer()
+        # TODO make call for check to update here
+        # TODO SOs update only on boot
+        # XXX SO receives update call and then asks CC to update itself
+
+    def __service_manifest(self, extras):
+        s_mani = {}
+        location = extras.get('it.hurtle.service_manifest', '')
+        if len(location) > 0:
+            s_mani = urllib2.urlopen(location)
+            s_mani = s_mani.read()
+            sm_hash = hashlib.md5(str(s_mani)).hexdigest()
+
+            s_mani = json.loads(s_mani)
+            s_mani['hash'] = sm_hash
+            # TODO this is ugly - should be an attribute of depends_on however depends_on is only an array
+            s_mani['depends_on_hash'] = hashlib.md5(str(s_mani['depends_on'])).hexdigest()
+
+            s_mani = self.__deployer(s_mani)
+
+        return s_mani
+
+    def __deployer(self, s_mani):
+        """
+        this modifies the in-memory copy of the service manifest
+        """
+        deployer = {}
+        deployer['hash'] = hashlib.md5(str(s_mani['resources'])).hexdigest()
+        for region in s_mani['resources'].keys():
+            # create a hash per deployment and provisioning template to use later in detecting updates
+            dep = self._load_doc(s_mani['resources'][region]['deployment'])
+            dep['hash'] = hashlib.md5(str(dep)).hexdigest()
+            prov = self._load_doc(s_mani['resources'][region]['provision'])
+            prov['hash'] = hashlib.md5(str(prov)).hexdigest()
+
+            deployer[region] = {
+                'client': self.__client(region),
+                'deployment': dep,
+                'provision': prov,
+                'stack_id': '',
+            }
+
+        s_mani['resources'] = deployer
+        return s_mani
+
+    def __client(self, region):
+        return util.get_deployer(self.token, url_type='public', tenant_name=self.tenant, region=region)
+
+    def _load_doc(self, path):
+        if path.endswith('.yaml'):
+            return yaml.load(urllib2.urlopen(path))
+        elif path.endswith('.json'):
+            return json.load(urllib2.urlopen(path))
+        else:
+            return {}
+
+    def design(self):
+        super(SOEExtn, self).design()
+
+    def deploy(self):
+        # super(SOEExtn, self).deploy()
+        # TODO check that the deployment descriptor is present
+        for region in self.deployer.keys():
+            if len(self.deployer[region]['stack_id']) < 1:
+                self.deployer[region]['stack_id'] = \
+                    self.deployer[region]['client'].deploy(self.deployer[region]['client']['deployment'], self.token)
+                LOG.info('Stack ID: ' + self.deployer[region]['stack_id'])
+
+    def provision(self):
+        # super(SOEExtn, self).provision()
+        # TODO check that the provision descriptor is present
+        for region in self.deployer.keys():
+            if len(self.deployer[region]['stack_id']) > 0:
+                self.deployer[region]['client'].update(self.deployer[region]['stack_id'],
+                                                       self.deployer[region]['client']['provision'], self.token)
+                LOG.info('Stack ID: ' + self.deployer[region]['stack_id'])
+
+    # XXX admin interface triggers update of SO implementation
+    def update(self, old, new, extras):
+        # super(SOEExtn, self).update(old, new, extras)
+        new_service_manifest = self.__service_manifest(extras)
+        self.compare(self.service_manifest, new_service_manifest)
+
+    def compare(self, old, new):
+        if not old['hash'] == new['hash']:
+            if not old['depends_on_hash'] == new['depends_on_hash']:
+                print 'service dependencies have changed'
+                print 'signal resolver to update'
+                if len(old['depends_on']) > len(new['depends_on']):
+                    print 'remove:\n' + str(old['depends_on']) + '\n'
+                elif len(new['depends_on']) > len(old['depends_on']):
+                    print 'add:\n' + str(new['depends_on']) + '\n'
+                else:
+                    print 'should have done something...'
+
+            if not old['resources']['hash'] == new['resources']['hash']:
+                print 'resources have changed'
+                print 'signal blue/green update\n'
+        else:
+            print 'nothing has changed\n'
+
+    def state(self):
+        super(SOEExtn, self).state()
+
+    def notify(self, entity, attributes, extras):
+        super(SOEExtn, self).notify(entity, attributes, extras)
+
+    def dispose(self):
+        """
+        Dispose SICs.
+        """
+        super(SOEExtn, self).dispose()
+        LOG.info('Calling dispose')
+        for region in self.deployer.keys():
+            if len(self.deployer[region]['stack_id']) > 0:
+                self.deployer[region]['client'].dispose(self.deployer[region]['stack_id'], self.token)
+                self.deployer[region]['stack_id'] = ''
+
+
+class SOE(SOEExtn):
     """
     Sample SO execution part.
     """
 
-    def __init__(self, token, tenant):
+    def __init__(self, token, tenant, **kwargs):
         super(SOE, self).__init__(token, tenant)
         self.stack_id = None
-        region_name = 'RegionOne'
-        self.deployer = util.get_deployer(token,
-                                          url_type='public',
-                                          tenant_name=tenant,
-                                          region=region_name)
-        LOG.info('Bundle dir: ' + BUNDLE_DIR)
 
     def design(self):
         """
         Do initial design steps here.
         """
         LOG.info('Entered design() - nothing to do here')
+        super(SOE, self).design()
 
     def deploy(self):
         """
         deploy SICs.
         """
         LOG.info('Calling deploy')
-        if self.stack_id is None:
-            f = open(os.path.join(BUNDLE_DIR, 'data', 'test.yaml'))
-            template = f.read()
-            f.close()
-            self.stack_id = self.deployer.deploy(template, self.token)
-            LOG.info('Stack ID: ' + self.stack_id.__repr__())
+        super(SOE, self).deploy()
 
     def provision(self):
         """
         (Optional) if not done during deployment - provision.
         """
-        LOG.info('Calling provision - nothing to do here yet!')
-        # if self.stack_id is not None:
-        #     f = open(os.path.join(BUNDLE_DIR, 'data', 'provision.yaml'))
-        #     template = f.read()
-        #     f.close()
-        #     # TODO read parameters from extras, if no parameters at this stage
-        #     #      assume that it will be supplied via an update.
-        #     # TODO set defaults
-        #     self.deployer.update(self.stack_id, template, self.token, parameters={'mme_pgwc_sgwc_input':'8.8.8.8'})
-        #     LOG.info('Updated stack ID: ' + self.stack_id.__repr__())
+
+        LOG.info('Calling provision')
+        super(SOE, self).provision()
 
     def dispose(self):
         """
         Dispose SICs.
         """
         LOG.info('Calling dispose')
-        if self.stack_id is not None:
-            self.deployer.dispose(self.stack_id, self.token)
-            self.stack_id = None
+        super(SOE, self).dispose()
 
     def state(self):
         """
@@ -100,22 +215,19 @@ class SOE(service_orchestrator.Execution):
             return 'Unknown', 'N/A', None
 
     def update(self, old, new, extras):
-        if self.stack_id is not None:
-            f = open(os.path.join(BUNDLE_DIR, 'data', 'test.yaml'))
-            template = f.read()
-            f.close()
+        # TODO implement your own update logic - this could be a heat template update call
+        super(SOE, self).update(old, new, extras)
+        LOG.info('Calling update - nothing to do!')
+        if len(self.service_manifest) > 0:
+            LOG.info('The service manifest is updated!')
 
-            # XXX the attribute mcn.endpoint.mme-pgwc-sgwc must be present, otherwise fail
-
-            self.deployer.update(self.stack_id, template, self.token)
-            LOG.info('Updated stack ID: ' + self.stack_id.__repr__())
 
 class SOD(service_orchestrator.Decision):
     """
     Sample Decision part of SO.
     """
 
-    def __init__(self, so_e, token, tenant):
+    def __init__(self, so_e, token, tenant, service_manifest):
         super(SOD, self).__init__(so_e, token, tenant)
 
     def run(self):
@@ -134,3 +246,19 @@ class ServiceOrchestrator(object):
         self.so_e = SOE(token, tenant)
         self.so_d = SOD(self.so_e, token, tenant)
         # so_d.start()
+#
+# if __name__ == '__main__':
+#     extras = {
+#         'it.hurtle.service_manifest': 'file:///Users/andy/Source/MCN/Source/demo-sm1/bundle/data/service_manifest.json'
+#     }
+#     test = SOEExtn(tenant='edmo', token='7c66db7430164abc94e1ad94c77cb311', extras=extras)
+#
+#     # test that no changes are made if the same manifest is presented
+#     old = new = {}
+#     extras['it.hurtle.service_manifest'] = 'file:///Users/andy/Source/MCN/Source/demo-sm1/bundle/data/service_manifest.json'
+#     test.update(old, new, extras)
+#
+#     # test that changes will be made if an updated manifest is presented
+#     old = new = {}
+#     extras['it.hurtle.service_manifest'] = 'file:///Users/andy/Source/MCN/Source/demo-sm1/bundle/data/service_manifest-uptd.json'
+#     test.update(old, new, extras)

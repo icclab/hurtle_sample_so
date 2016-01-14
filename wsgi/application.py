@@ -17,6 +17,8 @@
 
 
 import os
+import thread
+import admin
 
 try:
     virtenv = os.environ.get('OPENSHIFT_PYTHON_DIR', '.') + '/virtenv/'
@@ -75,18 +77,16 @@ class MyBackend(occi_ext.Backend):
 
 application = occi_ext.Application(MyBackend())
 
-#
-# Below for testing only
-# TODO replace with tornado
-#
-if __name__ == '__main__':
+
+def server():
+    thread.start_new_thread(admin.server, ('0.0.0.0', 8081))
+
     from wsgiref.simple_server import make_server
-    # OpSV3 needs process to listen on a public interface, use 0.0.0.0
-    # no effect with OpSV2
     httpd = make_server('0.0.0.0', 8080, application)
-    # Wait for a single request, serve it and quit.
     httpd.serve_forever()
 
+if __name__ == '__main__':
+    server()
 # import requests
 #
 # token = ''
