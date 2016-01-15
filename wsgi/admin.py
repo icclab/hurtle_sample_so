@@ -109,6 +109,11 @@ def home():
     return '', 200
 
 
+@app.route('/self')
+def self_info():
+    return json.dumps({'so_name': so_name}), 200
+
+
 # curl -X POST $URL/update/self -> update this SO
 @app.route('/update/<name>', methods=['POST'])
 def update(name):
