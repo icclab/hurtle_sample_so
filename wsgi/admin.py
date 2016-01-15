@@ -9,20 +9,28 @@ cc_admin_url = os.environ.get('CC_ADMIN_URL', False)
 if not cc_admin_url:
     raise RuntimeError('No CC_ADMIN_URL configured!')
 
-so_name = os.environ.get('HOSTNAME', False)
+so_name = os.environ.get('DC_NAME', False)
 if not so_name:
-    raise RuntimeError('No HOSTNAME configured!')
-so_name = so_name.split('-')[0]
+    raise RuntimeError('No DC_NAME configured!')
+so_name
 
 # should this be set somewhere...
 region = 'RegionOne'
+
+
+def print_response(response):
+    if response.content:
+        print '> %i: %s' % (response.status_code, response.content)
+    else:
+        print '> %i' % response.status_code
+
 
 def deep_equal(a, b):
     # if a and b are dicts and only contain lists and dicts, this should work
     return a == b
 
 
-def save():
+def save(data):
     pass
 
 
@@ -108,13 +116,15 @@ def update(name):
         url = cc_admin_url + '/update/%s' % so_name
         print 'curl -v -X POST %s' % url
         response = requests.post(url)
+        print_response(response)
+
         return response.content, response.status_code
     else:
         return 'not implemented', 500
 
 
 def server(host, port):
-
+    print 'Admin API listening on %s:%i' % (home, port)
     #check_for_updates()
 
     app.run(host=host, port=port, debug=False)
