@@ -5,9 +5,9 @@ import os
 
 app = Flask('hurtle-so')
 
-cc_url = os.environ.get('CC_URL', False)
-if not cc_url:
-    raise RuntimeError('No CC_URL configured!')
+cc_admin_url = os.environ.get('CC_ADMIN_URL', False)
+if not cc_admin_url:
+    raise RuntimeError('No CC_ADMIN_URL configured!')
 
 so_name = os.environ.get('HOSTNAME', False)
 if not so_name:
@@ -105,7 +105,7 @@ def home():
 @app.route('/update/<name>', methods=['POST'])
 def update(name):
     if name == 'self':
-        url = cc_url + '/update/%s' % so_name
+        url = cc_admin_url + '/update/%s' % so_name
         print 'curl -v -X POST %s' % url
         response = requests.post(url)
         return response.content, response.status_code
