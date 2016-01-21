@@ -6,13 +6,8 @@ import os
 app = Flask('hurtle-so')
 
 cc_admin_url = os.environ.get('CC_ADMIN_URL', False)
-if not cc_admin_url:
-    raise RuntimeError('No CC_ADMIN_URL configured!')
 
 so_name = os.environ.get('DC_NAME', False)
-if not so_name:
-    raise RuntimeError('No DC_NAME configured!')
-so_name
 
 # should this be set somewhere...
 region = 'RegionOne'
@@ -118,6 +113,7 @@ def self_info():
 @app.route('/update/<name>', methods=['POST'])
 def update(name):
     if name == 'self':
+        print '### Redeploying myself...'
         url = cc_admin_url + '/update/%s' % so_name
         print 'curl -v -X POST %s' % url
         response = requests.post(url)
@@ -129,7 +125,18 @@ def update(name):
 
 
 def server(host, port):
-    print 'Admin API listening on %s:%i' % (home, port)
+    print 'Admin API listening on %s:%i' % (host, port)
     #check_for_updates()
 
-    app.run(host=host, port=port, debug=False)
+    all_ok = True
+    if not cc_admin_url:
+        print 'No CC_ADMIN_URL configured!'
+        all_ok = False
+    if not so_name:
+        print 'No DC_NAME configured!'
+        all_ok = False
+
+    if all_ok:
+        app.run(host=host, port=port, debug=False)
+    else:
+        print 'Admin API will not be started!'

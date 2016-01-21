@@ -29,4 +29,4 @@ RUN echo "### Installing Base Dependencies via apk..." && \
     && apk del build-dependencies \
     && apk add python \
     && rm -rf /var/cache/apk/* /root/.cache/* /tmp/*
-CMD ["/env/bin/python", "./wsgi/application"]
+CMD ["/env/bin/python", "./wsgi/application.py"]
