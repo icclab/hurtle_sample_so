@@ -3,6 +3,9 @@ import requests
 import json
 import os
 
+import sys
+sys.stdout = sys.stderr
+
 app = Flask('hurtle-so')
 
 cc_admin_url = os.environ.get('CC_ADMIN_URL', False)
