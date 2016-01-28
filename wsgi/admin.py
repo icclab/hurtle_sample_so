@@ -2,6 +2,7 @@ from flask import Flask
 import requests
 import json
 import os
+from wsgi.mongo import get_mongo_connection
 
 import sys
 sys.stdout = sys.stderr
@@ -33,8 +34,17 @@ def save(data):
 
 
 def get_current():
+
+    #TODO: refine this
+    db = get_mongo_connection()
+    itgs = db.find_one()
+    deploy_itg = itgs['deploy']
+    provision_itg = itgs['provision']
     return {
-        'itg': {},
+        'itg': {
+            'deploy': deploy_itg,
+            'provision': provision_itg
+        },
         'stg': {}
     }
 
@@ -53,21 +63,21 @@ def get_desired():
         stg = json.loads(content)
 
     deployment_path = stg['resources'][region]['deployment']
-    provision_path = stg['resources'][region]['deployment']
+    provision_path = stg['resources'][region]['provision']
 
-    deployment = ''
+    deploy = ''
     provision = ''
 
     if deployment_path:
         with open(deployment_path) as content:
-            deployment = content
+            deploy = content
     if provision_path:
         with open(provision_path) as content:
             provision = content
 
     return {
         'itg': {
-            'deployment': deployment,
+            'deploy': deploy,
             'provision': provision
         },
         'stg': stg

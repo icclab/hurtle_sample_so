@@ -26,7 +26,7 @@ import hashlib
 import json
 import urllib2
 import yaml
-
+from wsgi.mongo import get_mongo_connection
 
 class SOEExtn(service_orchestrator.Execution):
 
@@ -39,11 +39,12 @@ class SOEExtn(service_orchestrator.Execution):
         self.tenant = tenant
         extras = kwargs.get('extras', None)
         self.service_manifest = self.__service_manifest(extras)
-        # self.deployer = {}
-        # self.deployer = self.__deployer()
+        self.deployer = {}
+        self.deployer = self.__deployer(self.service_manifest)
         # TODO make call for check to update here
         # TODO SOs update only on boot
         # XXX SO receives update call and then asks CC to update itself
+        self.db = get_mongo_connection()
 
     def __service_manifest(self, extras):
         s_mani = {}
@@ -108,6 +109,16 @@ class SOEExtn(service_orchestrator.Execution):
                     self.deployer[region]['client'].deploy(self.deployer[region]['client']['deployment'], self.token)
                 LOG.info('Stack ID: ' + self.deployer[region]['stack_id'])
 
+                # persist data
+                document_filter = {
+                    "_id": self.deployer[region]['stack_id']
+                }
+                data = {
+                    "_id": self.deployer[region]['stack_id'],
+                    "deploy": self.deployer[region]['client']['deployment']
+                }
+                self.db.update_one(document_filter, data)
+
     def provision(self):
         # super(SOEExtn, self).provision()
         # TODO check that the provision descriptor is present
@@ -116,6 +127,16 @@ class SOEExtn(service_orchestrator.Execution):
                 self.deployer[region]['client'].update(self.deployer[region]['stack_id'],
                                                        self.deployer[region]['client']['provision'], self.token)
                 LOG.info('Stack ID: ' + self.deployer[region]['stack_id'])
+
+                # persist data
+                document_filter = {
+                    "_id": self.deployer[region]['stack_id']
+                }
+                data = {
+                    "_id": self.deployer[region]['stack_id'],
+                    "provision": self.deployer[region]['client']['provision']
+                }
+                self.db.update_one(document_filter, data)
 
     # XXX admin interface triggers update of SO implementation
     def update(self, old, new, extras):
