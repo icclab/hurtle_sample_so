@@ -37,7 +37,8 @@ class SOEExtn(service_orchestrator.Execution):
         super(SOEExtn, self).__init__(token, tenant, **kwargs)
         self.token = token
         self.tenant = tenant
-        extras = kwargs.get('extras', None)
+        extras = kwargs.get('extras', {})
+        #TODO(edmo): think again about this?
         self.service_manifest = self.__service_manifest(extras)
         self.deployer = {}
         self.deployer = self.__deployer(self.service_manifest)
@@ -48,8 +49,8 @@ class SOEExtn(service_orchestrator.Execution):
 
     def __service_manifest(self, extras):
         s_mani = {}
-        location = extras.get('it.hurtle.service_manifest', '')
-        if len(location) > 0:
+        location = extras.get('it.hurtle.service_manifest', False)
+        if not location:
             s_mani = urllib2.urlopen(location)
             s_mani = s_mani.read()
             sm_hash = hashlib.md5(str(s_mani)).hexdigest()
