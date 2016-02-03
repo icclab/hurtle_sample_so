@@ -50,7 +50,7 @@ class SOEExtn(service_orchestrator.Execution):
     def __service_manifest(self, extras):
         s_mani = {}
         location = extras.get('it.hurtle.service_manifest', False)
-        if not location:
+        if location:
             s_mani = urllib2.urlopen(location)
             s_mani = s_mani.read()
             sm_hash = hashlib.md5(str(s_mani)).hexdigest()
