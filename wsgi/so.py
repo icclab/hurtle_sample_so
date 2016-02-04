@@ -39,9 +39,9 @@ class SOEExtn(service_orchestrator.Execution):
         self.tenant = tenant
         extras = kwargs.get('extras', {})
         #TODO(edmo): think again about this?
-        self.service_manifest = self.__service_manifest(extras)
-        self.deployer = {}
-        self.deployer = self.__deployer(self.service_manifest)
+        #self.service_manifest = self.__service_manifest(extras)
+        #self.deployer = {}
+        #self.deployer = self.__deployer(self.service_manifest)
         # TODO make call for check to update here
         # TODO SOs update only on boot
         # XXX SO receives update call and then asks CC to update itself
