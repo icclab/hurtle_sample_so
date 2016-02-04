@@ -10,8 +10,8 @@ def get_mongo_connection():
     if not so_name:
         raise RuntimeError('DC_NAME not defined!')
     mongo_service_name = so_name.upper().replace('-', '_')
-    db_host_key = mongo_service_name + '_SERVICE_HOST'
-    db_port_key = mongo_service_name + '_SERVICE_PORT'
+    db_host_key = mongo_service_name + '_M_SERVICE_HOST'
+    db_port_key = mongo_service_name + '_M_SERVICE_PORT'
     print 'getting mongo connection details via env: %s & %s' % (db_host_key, db_port_key)
 
     db_host = os.environ.get(db_host_key, False)
@@ -22,7 +22,11 @@ def get_mongo_connection():
     if not db_port:
         raise RuntimeError(mongo_service_name + 'SERVICE_PORT not defined!')
 
-    connection = MongoClient(db_host, int(db_port))
+    db_user = os.environ.get('DB_USER', 'admin')
+    db_password = os.environ.get('DB_PASSWORD', 'hurtle')
+
+    db_uri = 'mongodb://%s:%s@%s' % (db_user, db_password, db_host)
+    connection = MongoClient(db_uri, int(db_port))
     resources_db = connection.resources_db
     return resources_db.stacks
 

@@ -266,7 +266,7 @@ class ServiceOrchestrator(object):
 
     def __init__(self, token, tenant):
         self.so_e = SOE(token, tenant)
-        self.so_d = SOD(self.so_e, token, tenant)
+        self.so_d = SOD(self.so_e, token, tenant, {})
         # so_d.start()
 #
 # if __name__ == '__main__':
