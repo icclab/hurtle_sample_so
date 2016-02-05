@@ -1,10 +1,20 @@
 {
-    "service_type": "http://schemas.mobile-cloud-networking.eu/occi/sm#demo",
-    "service_description": "Test demo service",
-    "service_attributes": {
-        "mcn.endpoint.p3": "immutable",
-        "mcn.endpoint.p4": "immutable"
+  "service_type": "http://schemas.mobile-cloud-networking.eu/occi/sm#demo1",
+  "service_description": "Demo 1 service",
+  "service_attributes": {
+    "mcn.endpoint.p1":    "immutable",
+    "mcn.endpoint.p2":    ""
+  },
+  "service_endpoint": "http://127.0.0.1:8080/demo1/",
+  "depends_on": [],
+  "resources": {
+    "RegionOne": {
+      "deployment": "file:///Users/merne/Downloads/so-fugly-hacks/deployment.yaml",
+      "provision": "file:///Users/merne/Downloads/so-fugly-hacks/provision.yaml"
     },
-    "service_endpoint": "http://127.0.0.1:8888/demo/",
-    "depends_on": []
+    "UBern": {
+      "deployment": "file:///Users/merne/Downloads/so-fugly-hacks/deployment.yaml",
+      "provision": "file:///Users/merne/Downloads/so-fugly-hacks/provision.yaml"
+    }
+  }
 }
