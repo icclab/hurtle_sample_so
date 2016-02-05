@@ -18,9 +18,9 @@ def get_mongo_connection():
     db_port = os.environ.get(db_port_key, False)
     print 'resolved mongo host to %s:%s' % (db_host, db_port)
     if not db_host:
-        raise RuntimeError(mongo_service_name + 'SERVICE_HOST not defined!')
+        raise RuntimeError(db_host_key + ' not defined!')
     if not db_port:
-        raise RuntimeError(mongo_service_name + 'SERVICE_PORT not defined!')
+        raise RuntimeError(db_port_key + 'not defined!')
 
     db_user = os.environ.get('DB_USER', 'admin')
     db_password = os.environ.get('DB_PASSWORD', 'hurtle')

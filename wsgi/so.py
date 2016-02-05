@@ -38,8 +38,9 @@ class SOEExtn(service_orchestrator.Execution):
         self.token = token
         self.tenant = tenant
         extras = kwargs.get('extras', {})
-        #TODO(edmo): think again about this?
-        #self.service_manifest = self.__service_manifest(extras)
+        #FIXME(edmo): remove or document hardcoding
+
+        self.service_manifest = self.__service_manifest(extras)
         #self.deployer = {}
         #self.deployer = self.__deployer(self.service_manifest)
         # TODO make call for check to update here
@@ -49,18 +50,20 @@ class SOEExtn(service_orchestrator.Execution):
 
     def __service_manifest(self, extras):
         s_mani = {}
-        location = extras.get('it.hurtle.service_manifest', False)
-        if location:
-            s_mani = urllib2.urlopen(location)
-            s_mani = s_mani.read()
-            sm_hash = hashlib.md5(str(s_mani)).hexdigest()
+        #path = '/opt/app-root/src/data/service_manifest.json'
+        path = '/Users/merne/dev/hurtle/hurtle_sample_so/data/service_manifest.json'
+        with open(path) as file:
+            s_mani = json.loads(file.read())
 
-            s_mani = json.loads(s_mani)
-            s_mani['hash'] = sm_hash
-            # TODO this is ugly - should be an attribute of depends_on however depends_on is only an array
-            s_mani['depends_on_hash'] = hashlib.md5(str(s_mani['depends_on'])).hexdigest()
+        #s_mani = s_mani.read()
+        #sm_hash = hashlib.md5(str(s_mani)).hexdigest()
 
-            s_mani = self.__deployer(s_mani)
+        #s_mani = json.loads(s_mani)
+        #s_mani['hash'] = sm_hash
+        # TODO this is ugly - should be an attribute of depends_on however depends_on is only an array
+        #s_mani['depends_on_hash'] = hashlib.md5(str(s_mani['depends_on'])).hexdigest()
+
+        s_mani = self.__deployer(s_mani)
 
         return s_mani
 
@@ -69,13 +72,13 @@ class SOEExtn(service_orchestrator.Execution):
         this modifies the in-memory copy of the service manifest
         """
         deployer = {}
-        deployer['hash'] = hashlib.md5(str(s_mani['resources'])).hexdigest()
+        #deployer['hash'] = hashlib.md5(str(s_mani['resources'])).hexdigest()
         for region in s_mani['resources'].keys():
             # create a hash per deployment and provisioning template to use later in detecting updates
             dep = self._load_doc(s_mani['resources'][region]['deployment'])
-            dep['hash'] = hashlib.md5(str(dep)).hexdigest()
+            # dep['hash'] = hashlib.md5(str(dep)).hexdigest()
             prov = self._load_doc(s_mani['resources'][region]['provision'])
-            prov['hash'] = hashlib.md5(str(prov)).hexdigest()
+            # prov['hash'] = hashlib.md5(str(prov)).hexdigest()
 
             deployer[region] = {
                 'client': self.__client(region),
@@ -91,52 +94,52 @@ class SOEExtn(service_orchestrator.Execution):
         return util.get_deployer(self.token, url_type='public', tenant_name=self.tenant, region=region)
 
     def _load_doc(self, path):
-        if path.endswith('.yaml'):
-            return yaml.load(urllib2.urlopen(path))
-        elif path.endswith('.json'):
-            return json.load(urllib2.urlopen(path))
-        else:
-            return {}
+        return urllib2.urlopen(path).read()
 
     def design(self):
-        super(SOEExtn, self).design()
+        #super(SOEExtn, self).design()
+
+        return
 
     def deploy(self):
         # super(SOEExtn, self).deploy()
         # TODO check that the deployment descriptor is present
-        for region in self.deployer.keys():
-            if len(self.deployer[region]['stack_id']) < 1:
-                self.deployer[region]['stack_id'] = \
-                    self.deployer[region]['client'].deploy(self.deployer[region]['client']['deployment'], self.token)
-                LOG.info('Stack ID: ' + self.deployer[region]['stack_id'])
+        for region in self.service_manifest['resources'].keys():
+            if len(self.service_manifest['resources'][region]['stack_id']) < 1:
+                self.service_manifest['resources'][region]['stack_id'] = \
+                    self.service_manifest['resources'][region]['client'].deploy(self.service_manifest['resources'][region]['deployment'], self.token)
+                LOG.info('Stack ID: ' + self.service_manifest['resources'][region]['stack_id'])
 
                 # persist data
                 document_filter = {
-                    "_id": self.deployer[region]['stack_id']
+                    "_id": self.service_manifest['resources'][region]['stack_id']
                 }
                 data = {
-                    "_id": self.deployer[region]['stack_id'],
-                    "deploy": self.deployer[region]['client']['deployment']
+                    "_id": self.service_manifest['resources'][region]['stack_id'],
+                    "deploy": self.service_manifest['resources'][region]['deployment']
                 }
+                # TODO(ernm): add logic to update if exist, else insert!
                 self.db.update_one(document_filter, data)
 
     def provision(self):
         # super(SOEExtn, self).provision()
         # TODO check that the provision descriptor is present
-        for region in self.deployer.keys():
-            if len(self.deployer[region]['stack_id']) > 0:
-                self.deployer[region]['client'].update(self.deployer[region]['stack_id'],
-                                                       self.deployer[region]['client']['provision'], self.token)
-                LOG.info('Stack ID: ' + self.deployer[region]['stack_id'])
+        for region in self.service_manifest['resources'].keys():
+            if len(self.service_manifest['resources'][region]['stack_id']) > 0:
+                self.service_manifest['resources'][region]['client'].update(self.service_manifest['resources'][region]['stack_id'],
+                                                       self.service_manifest['resources'][region]['provision'], self.token)
+                LOG.info('Stack ID: ' + self.service_manifest['resources'][region]['stack_id'])
 
                 # persist data
                 document_filter = {
-                    "_id": self.deployer[region]['stack_id']
+                    "_id": self.service_manifest['resources'][region]['stack_id']
                 }
                 data = {
-                    "_id": self.deployer[region]['stack_id'],
-                    "provision": self.deployer[region]['client']['provision']
+                    "_id": self.service_manifest['resources'][region]['stack_id'],
+                    "provision": self.service_manifest['resources'][region]['provision']
                 }
+                # TODO(ernm): add logic to update if exist, else insert!
+
                 self.db.update_one(document_filter, data)
 
     # XXX admin interface triggers update of SO implementation
@@ -175,10 +178,10 @@ class SOEExtn(service_orchestrator.Execution):
         """
         super(SOEExtn, self).dispose()
         LOG.info('Calling dispose')
-        for region in self.deployer.keys():
-            if len(self.deployer[region]['stack_id']) > 0:
-                self.deployer[region]['client'].dispose(self.deployer[region]['stack_id'], self.token)
-                self.deployer[region]['stack_id'] = ''
+        for region in self.service_manifest['resources'].keys():
+            if len(self.service_manifest['resources'][region]['stack_id']) > 0:
+                self.service_manifest['resources'][region]['client'].dispose(self.service_manifest['resources'][region]['stack_id'], self.token)
+                self.service_manifest['resources'][region]['stack_id'] = ''
 
 
 class SOE(SOEExtn):
@@ -223,8 +226,10 @@ class SOE(SOEExtn):
         """
         Report on state.
         """
+
+        #TODO: report for each region
         if self.stack_id is not None:
-            tmp = self.deployer.details(self.stack_id, self.token)
+            tmp = self.service_manifest['resources'].details(self.stack_id, self.token)
             LOG.info('Returning Stack output state')
             output = ''
             try:
