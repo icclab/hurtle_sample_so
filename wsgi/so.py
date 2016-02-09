@@ -45,12 +45,12 @@ class SOEExtn(service_orchestrator.Execution):
         # TODO make call for check to update here
         # TODO SOs update only on boot
         # XXX SO receives update call and then asks CC to update itself
-        # self.db = get_mongo_connection()
+        self.db = get_mongo_connection()
 
     def __service_manifest(self, extras):
         s_mani = {}
-        # path = '/opt/app-root/src/data/service_manifest.json'
-        path = '/Users/andy/Source/hurtle/hurtle_sample_so/data/service_manifest_composed.json'
+        path = '/opt/app-root/src/data/service_manifest.json'
+        #path = './data/service_manifest.json'
         with open(path) as file:
             s_mani = json.loads(file.read())
 
@@ -102,16 +102,25 @@ class SOEExtn(service_orchestrator.Execution):
                     self.service_manifest['resources'][region]['client'].deploy(self.service_manifest['resources'][region]['deployment'], self.token)
                 LOG.info('Stack ID: ' + self.service_manifest['resources'][region]['stack_id'])
 
-                # persist data
-                document_filter = {
-                    "_id": self.service_manifest['resources'][region]['stack_id']
-                }
-                data = {
-                    "_id": self.service_manifest['resources'][region]['stack_id'],
-                    "deploy": self.service_manifest['resources'][region]['deployment']
-                }
-                # TODO(ernm): add logic to update if exist, else insert!
-                # self.db.update_one(document_filter, data)
+                if self.db:
+
+                    # persist data
+                    document_filter = {
+                        "_id": self.service_manifest['resources'][region]['stack_id']
+                    }
+                    data = {
+                        "_id": self.service_manifest['resources'][region]['stack_id'],
+                        "deploy": self.service_manifest['resources'][region]['deployment']
+                    }
+                    current = self.db.find_one(document_filter)
+                    if not current:
+                        self.db.insert(data)
+                    else:
+                        self.db.update_one(document_filter, {
+                            "$set": {
+                                'deploy': data['deploy']
+                            }
+                        })
 
     def provision(self):
         # super(SOEExtn, self).provision()
@@ -122,17 +131,27 @@ class SOEExtn(service_orchestrator.Execution):
                                                        self.service_manifest['resources'][region]['provision'], self.token)
                 LOG.info('Stack ID: ' + self.service_manifest['resources'][region]['stack_id'])
 
-                # persist data
-                document_filter = {
-                    "_id": self.service_manifest['resources'][region]['stack_id']
-                }
-                data = {
-                    "_id": self.service_manifest['resources'][region]['stack_id'],
-                    "provision": self.service_manifest['resources'][region]['provision']
-                }
-                # TODO(ernm): add logic to update if exist, else insert!
+                if self.db:
+                    # persist data
+                    document_filter = {
+                        "_id": self.service_manifest['resources'][region]['stack_id']
+                    }
+                    data = {
+                        "_id": self.service_manifest['resources'][region]['stack_id'],
+                        "provision": self.service_manifest['resources'][region]['provision']
+                    }
 
-                # self.db.update_one(document_filter, data)
+                    current = self.db.find_one(document_filter)
+                    if not current:
+                        self.db.insert(data)
+                    else:
+
+                        self.db.update_one(document_filter, {
+                            "$set": {
+                                'provision': data['provision']
+                            }
+                        })
+
 
     # XXX admin interface triggers update of SO implementation
     def update(self, old, new, extras):

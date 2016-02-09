@@ -9,8 +9,8 @@
   "depends_on": [],
   "resources": {
     "RegionOne": {
-      "deployment": "file:///Users/andy/Source/hurtle/hurtle_sample_so/data/deployment.yaml",
-      "provision": "file:///Users/andy/Source/hurtle/hurtle_sample_so/data/provision.yaml"
+      "deployment": "file:///opt/app-root/src/data/deployment.yaml",
+      "provision": "file:///opt/app-root/src/data/provision.yaml"
     }
   }
 }
