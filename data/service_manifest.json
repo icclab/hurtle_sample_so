@@ -9,12 +9,8 @@
   "depends_on": [],
   "resources": {
     "RegionOne": {
-      "deployment": "file:///Users/merne/Downloads/so-fugly-hacks/deployment.yaml",
-      "provision": "file:///Users/merne/Downloads/so-fugly-hacks/provision.yaml"
-    },
-    "UBern": {
-      "deployment": "file:///Users/merne/Downloads/so-fugly-hacks/deployment.yaml",
-      "provision": "file:///Users/merne/Downloads/so-fugly-hacks/provision.yaml"
+      "deployment": "file:///Users/andy/Source/hurtle/hurtle_sample_so/data/deployment.yaml",
+      "provision": "file:///Users/andy/Source/hurtle/hurtle_sample_so/data/provision.yaml"
     }
   }
 }

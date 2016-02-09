@@ -22,11 +22,10 @@ from sdk.mcn import util
 from sm.so import service_orchestrator
 from sm.so.service_orchestrator import LOG
 
-import hashlib
 import json
 import urllib2
-import yaml
 from wsgi.mongo import get_mongo_connection
+
 
 class SOEExtn(service_orchestrator.Execution):
 
@@ -38,30 +37,30 @@ class SOEExtn(service_orchestrator.Execution):
         self.token = token
         self.tenant = tenant
         extras = kwargs.get('extras', {})
-        #FIXME(edmo): remove or document hardcoding
+        # FIXME(edmo): remove or document hardcoding
 
         self.service_manifest = self.__service_manifest(extras)
-        #self.deployer = {}
-        #self.deployer = self.__deployer(self.service_manifest)
+        # self.deployer = {}
+        # self.deployer = self.__deployer(self.service_manifest)
         # TODO make call for check to update here
         # TODO SOs update only on boot
         # XXX SO receives update call and then asks CC to update itself
-        self.db = get_mongo_connection()
+        # self.db = get_mongo_connection()
 
     def __service_manifest(self, extras):
         s_mani = {}
-        #path = '/opt/app-root/src/data/service_manifest.json'
-        path = '/Users/merne/dev/hurtle/hurtle_sample_so/data/service_manifest.json'
+        # path = '/opt/app-root/src/data/service_manifest.json'
+        path = '/Users/andy/Source/hurtle/hurtle_sample_so/data/service_manifest_composed.json'
         with open(path) as file:
             s_mani = json.loads(file.read())
 
-        #s_mani = s_mani.read()
-        #sm_hash = hashlib.md5(str(s_mani)).hexdigest()
+        # s_mani = s_mani.read()
+        # sm_hash = hashlib.md5(str(s_mani)).hexdigest()
 
-        #s_mani = json.loads(s_mani)
-        #s_mani['hash'] = sm_hash
+        # s_mani = json.loads(s_mani)
+        # s_mani['hash'] = sm_hash
         # TODO this is ugly - should be an attribute of depends_on however depends_on is only an array
-        #s_mani['depends_on_hash'] = hashlib.md5(str(s_mani['depends_on'])).hexdigest()
+        # s_mani['depends_on_hash'] = hashlib.md5(str(s_mani['depends_on'])).hexdigest()
 
         s_mani = self.__deployer(s_mani)
 
@@ -72,16 +71,16 @@ class SOEExtn(service_orchestrator.Execution):
         this modifies the in-memory copy of the service manifest
         """
         deployer = {}
-        #deployer['hash'] = hashlib.md5(str(s_mani['resources'])).hexdigest()
+        # deployer['hash'] = hashlib.md5(str(s_mani['resources'])).hexdigest()
         for region in s_mani['resources'].keys():
             # create a hash per deployment and provisioning template to use later in detecting updates
-            dep = self._load_doc(s_mani['resources'][region]['deployment'])
+            dep = urllib2.urlopen(s_mani['resources'][region]['deployment']).read()
             # dep['hash'] = hashlib.md5(str(dep)).hexdigest()
-            prov = self._load_doc(s_mani['resources'][region]['provision'])
+            prov = urllib2.urlopen(s_mani['resources'][region]['provision']).read()
             # prov['hash'] = hashlib.md5(str(prov)).hexdigest()
 
             deployer[region] = {
-                'client': self.__client(region),
+                'client': util.get_deployer(self.token, url_type='public', tenant_name=self.tenant, region=region),
                 'deployment': dep,
                 'provision': prov,
                 'stack_id': '',
@@ -90,16 +89,9 @@ class SOEExtn(service_orchestrator.Execution):
         s_mani['resources'] = deployer
         return s_mani
 
-    def __client(self, region):
-        return util.get_deployer(self.token, url_type='public', tenant_name=self.tenant, region=region)
-
-    def _load_doc(self, path):
-        return urllib2.urlopen(path).read()
-
     def design(self):
-        #super(SOEExtn, self).design()
-
-        return
+        # super(SOEExtn, self).design()
+        LOG.info('Entered design() - nothing to do here')
 
     def deploy(self):
         # super(SOEExtn, self).deploy()
@@ -119,7 +111,7 @@ class SOEExtn(service_orchestrator.Execution):
                     "deploy": self.service_manifest['resources'][region]['deployment']
                 }
                 # TODO(ernm): add logic to update if exist, else insert!
-                self.db.update_one(document_filter, data)
+                # self.db.update_one(document_filter, data)
 
     def provision(self):
         # super(SOEExtn, self).provision()
@@ -140,7 +132,7 @@ class SOEExtn(service_orchestrator.Execution):
                 }
                 # TODO(ernm): add logic to update if exist, else insert!
 
-                self.db.update_one(document_filter, data)
+                # self.db.update_one(document_filter, data)
 
     # XXX admin interface triggers update of SO implementation
     def update(self, old, new, extras):
@@ -167,7 +159,20 @@ class SOEExtn(service_orchestrator.Execution):
             print 'nothing has changed\n'
 
     def state(self):
-        super(SOEExtn, self).state()
+        # super(SOEExtn, self).state()
+        stack_states = []
+        for region in self.service_manifest['resources'].keys():
+            tmp = self.service_manifest['resources'][region]['client'].details(self.service_manifest['resources'][region]['stack_id'], self.token)
+            LOG.info('Returning Stack output state')
+            output = ''
+            try:
+                output = tmp['output']
+            except KeyError:
+                pass
+            # each state state is a set
+            # the outputs here should be cleaned up!
+            stack_states.append((tmp['state'], self.service_manifest['resources'][region]['stack_id'], output))
+
 
     def notify(self, entity, attributes, extras):
         super(SOEExtn, self).notify(entity, attributes, extras)
@@ -176,7 +181,7 @@ class SOEExtn(service_orchestrator.Execution):
         """
         Dispose SICs.
         """
-        super(SOEExtn, self).dispose()
+        # super(SOEExtn, self).dispose()
         LOG.info('Calling dispose')
         for region in self.service_manifest['resources'].keys():
             if len(self.service_manifest['resources'][region]['stack_id']) > 0:
@@ -191,13 +196,11 @@ class SOE(SOEExtn):
 
     def __init__(self, token, tenant, **kwargs):
         super(SOE, self).__init__(token, tenant)
-        self.stack_id = None
 
     def design(self):
         """
         Do initial design steps here.
         """
-        LOG.info('Entered design() - nothing to do here')
         super(SOE, self).design()
 
     def deploy(self):
@@ -226,20 +229,8 @@ class SOE(SOEExtn):
         """
         Report on state.
         """
-
-        #TODO: report for each region
-        if self.stack_id is not None:
-            tmp = self.service_manifest['resources'].details(self.stack_id, self.token)
-            LOG.info('Returning Stack output state')
-            output = ''
-            try:
-                output = tmp['output']
-            except KeyError:
-                pass
-            return tmp['state'], self.stack_id, output
-        else:
-            LOG.info('Stack output: none - Unknown, N/A')
-            return 'Unknown', 'N/A', None
+        LOG.info('Calling state')
+        super(SOE, self).state()
 
     def update(self, old, new, extras):
         # TODO implement your own update logic - this could be a heat template update call

@@ -1,17 +1,23 @@
 {
-    "service_type": "http://schemas.mobile-cloud-networking.eu/occi/sm#test-compo",
-    "service_description": "Test composed service",
-    "service_attributes": {
-        "mcn.endpoint.p3": "immutable",
-        "mcn.endpoint.p4": "immutable"
-    },
-    "service_endpoint": "http://127.0.0.1:8888/test-compo/",
-    "depends_on": [
-      { "http://schemas.mobile-cloud-networking.eu/occi/sm#demo1": { "inputs": [] } },
-      { "http://schemas.mobile-cloud-networking.eu/occi/sm#demo2": {
-          "inputs": [
-            "http://schemas.mobile-cloud-networking.eu/occi/sm#demo1#mcn.endpoint.p1"
-          ] }
-      }
-    ]
+  "service_type": "http://schemas.mobile-cloud-networking.eu/occi/sm#test-compo",
+  "service_description": "Test composed service",
+  "service_attributes": {
+    "mcn.endpoint.p1":    "immutable",
+    "mcn.endpoint.p2":    ""
+  },
+  "service_endpoint": "http://127.0.0.1:8080/test-compo/",
+  "depends_on": [
+    { "http://schemas.mobile-cloud-networking.eu/occi/sm#demo1": { "inputs": [] } },
+    { "http://schemas.mobile-cloud-networking.eu/occi/sm#demo2": {
+      "inputs": [
+        "http://schemas.mobile-cloud-networking.eu/occi/sm#demo1#mcn.endpoint.p1"
+      ] }
+    }
+  ],
+  "resources": {
+    "RegionOne": {
+      "deployment": "file:///Users/andy/Source/hurtle/hurtle_sample_so/data/deployment.yaml",
+      "provision": "file:///Users/andy/Source/hurtle/hurtle_sample_so/data/provision.yaml"
+    }
+  }
 }

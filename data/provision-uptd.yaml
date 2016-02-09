@@ -1,0 +1,78 @@
+heat_template_version: 2013-05-23
+description: Simple template to deploy a single compute instance that uses SoftwareConfig and SoftwareDeployment
+
+parameters:
+
+  private_mgmt_net:
+    type: string
+    description: >
+      ID of private network mgmt
+    default: e0362dab-3931-48af-a282-219861ad3394
+
+  public_net:
+    type: string
+    description: >
+      ID of public network
+    default: 77e659dd-f1b4-430c-ac6f-d92ec0137c85
+
+resources:
+
+  config:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      group: script
+      inputs:
+      - name: foo
+      - name: bar
+      outputs:
+      - name: result
+      config: |
+        #!/bin/sh -x
+        echo "Writing to /tmp/$bar"
+        echo $foo > /tmp/$bar
+        echo $foo > /tmp/UPDATE
+        echo -n "The file /tmp/$bar contains `cat /tmp/$bar` for server $deploy_server_id during $deploy_action" > $heat_outputs_path.result
+        echo "Written to /tmp/$bar"
+        echo "Output to stderr" 1>&2
+
+  deployment:
+    type: OS::Heat::SoftwareDeployment
+    properties:
+      config:
+        get_resource: config
+      server:
+        get_resource: server
+      input_values:
+        foo: {get_param: private_mgmt_net}
+        bar: baaaaa
+
+  server:
+    type: OS::Nova::Server
+    properties:
+      key_name: mcn-key
+      image: ubuntu-software-config
+      flavor: m1.small
+      networks:
+        - port: { get_resource: my_port }
+      user_data_format: SOFTWARE_CONFIG
+
+  my_port:
+    type: OS::Neutron::Port
+    properties:
+      network_id: {get_param: private_mgmt_net}
+
+#  my_floating_ip:
+#    type: OS::Neutron::FloatingIP
+#    properties:
+#      floating_network_id: { get_param: public_net}
+#      port_id: { get_resource:  my_port }
+
+outputs:
+  mcn.endpoint.p1:
+    description: dummy param one
+    value:
+      "10.0.0.1"
+  mcn.endpoint.p2:
+    description: dummy param one
+    value:
+      "10.0.0.1"
