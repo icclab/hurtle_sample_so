@@ -179,18 +179,63 @@ class SOEExtn(service_orchestrator.Execution):
 
     def state(self):
         # super(SOEExtn, self).state()
-        stack_states = []
+        stack_state = ''
+        stack_ids = ''
+        outputs = []
         for region in self.service_manifest['resources'].keys():
             tmp = self.service_manifest['resources'][region]['client'].details(self.service_manifest['resources'][region]['stack_id'], self.token)
             LOG.info('Returning Stack output state')
-            output = ''
+
+
+            # for stack state, we return the least successful one
+            # e.g. one stack "CREATE_COMPLETED', one "CREATE_FAILED" -> we return CREATE_FAILED
+            #      one stack with "CREATE_IN_PROGRESS", one "CREATE_COMPLETED" -> we return CREATE_IN_PROGRESS
+            #
+
+            successful_states = ['CREATE_COMPLETE', 'UPDATE_COMPLETE']
+            ongoing_states = ['CREATE_IN_PROGRESS', 'UPDATE_IN_PROGRESS']
+            failed_states = ['CREATE_FAILED', 'UPDATE_FAILED']
+            no_state = ['']
+
+            current_state = tmp['state']
+            if stack_state == '':
+                stack_state = current_state
+            else:
+                # we already have a state present...
+                if current_state in successful_states:
+                    # no need to write a successful state back
+                    pass
+                if current_state in ongoing_states:
+                    # if the saved state is 'better', overwrite
+                    if stack_state in successful_states:
+                        stack_state = current_state
+                if current_state in failed_states:
+                    # if the saved state is 'better', overwrite
+                    if stack_state in successful_states or stack_state in ongoing_states:
+                        stack_state = current_state
+
+
+
+            # for stack_id, we concat them together with their region-names:
+            # region1:stack-id1,region2:stack-id2
+            if len(stack_ids) == 0:
+                stack_ids = '%s:%s' % (region, self.service_manifest['resources'][region]['stack_id'])
+            else:
+                stack_ids = '%s,%s:%s' %(stack_ids, region, self.service_manifest['resources'][region]['stack_id'])
+
+            # for stack_output, we add the region name at the end of every key
+            # a.b.c in region 1 becomes a.b.c.region1
             try:
-                output = tmp['output']
+                current_outputs = tmp['output']
+                for output in current_outputs:
+                    outputs.append({
+                        'output_key': '%s.%s' % (output['output_key'], region.replace(' ', '')),
+                        'output_value': output['output_value']
+                    })
             except KeyError:
                 pass
-            # each state state is a set
-            # the outputs here should be cleaned up!
-            stack_states.append((tmp['state'], self.service_manifest['resources'][region]['stack_id'], output))
+
+        return stack_state, stack_ids, outputs
 
 
     def notify(self, entity, attributes, extras):
@@ -249,7 +294,7 @@ class SOE(SOEExtn):
         Report on state.
         """
         LOG.info('Calling state')
-        super(SOE, self).state()
+        return super(SOE, self).state()
 
     def update(self, old, new, extras):
         # TODO implement your own update logic - this could be a heat template update call
