@@ -149,6 +149,9 @@ def update_itg_if_required(current, desired):
 def update_itg(current, desired):
     # we migrate from current.provision to desired.deploy, then update to desired.provision
 
+    # XXX: integration point for state migration work
+    # might need another separation below, depending on if state is migrated or not
+
     migration_templates = {}
 
     for region_name, region in current.iteritems():
