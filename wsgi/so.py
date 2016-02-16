@@ -96,6 +96,8 @@ class SOEExtn(service_orchestrator.Execution):
     def deploy(self):
         # super(SOEExtn, self).deploy()
         # TODO check that the deployment descriptor is present
+
+        # TODO: refactor this to: for region_name, region in self.service_manifest['resources'].iteritems()
         for region in self.service_manifest['resources'].keys():
             if len(self.service_manifest['resources'][region]['stack_id']) < 1:
                 self.service_manifest['resources'][region]['stack_id'] = \
@@ -106,16 +108,19 @@ class SOEExtn(service_orchestrator.Execution):
 
                     # persist data
                     document_filter = {
-                        "_id": self.service_manifest['resources'][region]['stack_id']
+                        "_id": self.service_manifest['resources'][region]['stack_id'],
+                        "region": region
                     }
                     data = {
                         "_id": self.service_manifest['resources'][region]['stack_id'],
+                        "region": region,
                         "deploy": self.service_manifest['resources'][region]['deployment']
                     }
                     current = self.db.find_one(document_filter)
                     if not current:
                         self.db.insert(data)
                     else:
+                        # does this case ever happen?
                         self.db.update_one(document_filter, {
                             "$set": {
                                 'deploy': data['deploy']
@@ -125,6 +130,8 @@ class SOEExtn(service_orchestrator.Execution):
     def provision(self):
         # super(SOEExtn, self).provision()
         # TODO check that the provision descriptor is present
+
+        # TODO: refactor this to: for region_name, region in self.service_manifest['resources'].iteritems()
         for region in self.service_manifest['resources'].keys():
             if len(self.service_manifest['resources'][region]['stack_id']) > 0:
                 self.service_manifest['resources'][region]['client'].update(self.service_manifest['resources'][region]['stack_id'],
@@ -134,10 +141,12 @@ class SOEExtn(service_orchestrator.Execution):
                 if self.db:
                     # persist data
                     document_filter = {
-                        "_id": self.service_manifest['resources'][region]['stack_id']
+                        "_id": self.service_manifest['resources'][region]['stack_id'],
+                        "region": region
                     }
                     data = {
                         "_id": self.service_manifest['resources'][region]['stack_id'],
+                        "region": region,
                         "provision": self.service_manifest['resources'][region]['provision']
                     }
 
