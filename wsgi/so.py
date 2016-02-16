@@ -83,7 +83,7 @@ class SOEExtn(service_orchestrator.Execution):
                 'client': util.get_deployer(self.token, url_type='public', tenant_name=self.tenant, region=region),
                 'deployment': dep,
                 'provision': prov,
-                'stack_id': '',
+                'stack_id': ''
             }
 
         s_mani['resources'] = deployer
@@ -113,6 +113,8 @@ class SOEExtn(service_orchestrator.Execution):
                     }
                     data = {
                         "_id": self.service_manifest['resources'][region]['stack_id'],
+                        "token": self.token,
+                        "tenant_name": self.tenant,
                         "region": region,
                         "deploy": self.service_manifest['resources'][region]['deployment']
                     }
@@ -146,6 +148,7 @@ class SOEExtn(service_orchestrator.Execution):
                     }
                     data = {
                         "_id": self.service_manifest['resources'][region]['stack_id'],
+                        "token": self.token,
                         "region": region,
                         "provision": self.service_manifest['resources'][region]['provision']
                     }
@@ -157,7 +160,8 @@ class SOEExtn(service_orchestrator.Execution):
 
                         self.db.update_one(document_filter, {
                             "$set": {
-                                'provision': data['provision']
+                                'provision': data['provision'],
+                                'token': data['token']
                             }
                         })
 
