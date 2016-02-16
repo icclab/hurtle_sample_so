@@ -51,7 +51,7 @@ class MigrationTemplateGenerator:
         generated['resources'] = self.old_version['resources'].copy()
 
         for name, resource in self.new_version['resources'].iteritems():
-            resource_type = resource['resource_type']
+            resource_type = resource['type']
             category = self.get_category(resource_type, name)
 
             if category == 'Version':
@@ -84,7 +84,7 @@ class MigrationTemplateGenerator:
         generated['resources'] = self.old_version['resources'].copy()
 
         for name, resource in self.new_version['resources'].iteritems():
-            resource_type = resource['resource_type']
+            resource_type = resource['type']
             category = self.get_category(resource_type, name)
 
             if category == 'Version':
