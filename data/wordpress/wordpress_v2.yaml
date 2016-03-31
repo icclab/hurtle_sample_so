@@ -40,8 +40,8 @@ resources:
       flavor: {get_param: database_flavor}
       image: {get_param: image}
       key_name: {get_param: key}
-      networks: [{network: {get_resource: private_net} }]
-      security_groups: [{ get_resource: db_securitygroup}]
+      networks: [{network: {get_resource: shared_private_net} }]
+      security_groups: [{ get_resource: shared_db_securitygroup}]
       user_data:
         str_replace:
           template: |
@@ -61,19 +61,17 @@ resources:
             EXIT
             EOF
           params:
-            $db_rootpassword: {get_attr: [database_root_password, value]}
+            $db_rootpassword: {get_attr: [shared_database_root_password, value]}
             $db_name: {get_param: database_name}
             $db_user: {get_param: database_user}
-            $db_password: {get_attr: [database_password, value]}
-
+            $db_password: {get_attr: [shared_database_password, value]}
   v2_webserver:
     type: OS::Nova::Server
     properties:
       flavor: {get_param: flavor}
       image: {get_param: image}
       key_name: {get_param: key}
-      networks: [{port: {get_resource: webserver_port_v2}}]
-#      pool_id: {get_resource: pool}
+      networks: [{port: {get_resource: v2_webserver_port}}]
       user_data:
         str_replace:
           template: |
@@ -93,8 +91,8 @@ resources:
           params:
             $db_name: {get_param: database_name}
             $db_user: {get_param: database_user}
-            $db_password: {get_attr: [database_password, value]}
-            $db_host: {get_attr: [db, first_address]}
+            $db_password: {get_attr: [shared_database_password, value]}
+            $db_host: {get_attr: [shared_db, first_address]}
 
   shared_private_net:
     type: OS::Neutron::Net
@@ -102,7 +100,7 @@ resources:
   shared_private_subnet:
     type: OS::Neutron::Subnet
     properties:
-      network_id: { get_resource: private_net }
+      network_id: { get_resource: shared_private_net }
       cidr: 10.0.0.0/24
       gateway_ip: 10.0.0.1
       allocation_pools:
@@ -152,23 +150,25 @@ resources:
   shared_router_interface:
     type: OS::Neutron::RouterInterface
     properties:
-      router_id: { get_resource: router }
-      subnet_id: { get_resource: private_subnet }
+      router_id: { get_resource: shared_router }
+      subnet_id: { get_resource: shared_private_subnet }
 
 
   v2_webserver_port:
     type: OS::Neutron::Port
     properties:
-      security_groups: [{ get_resource: webserver_securitygroup}]
-      network_id: { get_resource: private_net }
+      security_groups: [{ get_resource: shared_webserver_securitygroup}]
+      network_id: { get_resource: shared_private_net }
       fixed_ips:
-        - subnet_id: { get_resource: private_subnet }
+        - subnet_id: { get_resource: shared_private_subnet }
 
   service_floating_ip:
     type: OS::Neutron::FloatingIP
     properties:
       floating_network: { get_param: external_network_id }
-      port_id: { get_resource: webserver_port_v2 }
+      port_id: { get_resource: v2_webserver_port }
+
+
 
 
 outputs:
