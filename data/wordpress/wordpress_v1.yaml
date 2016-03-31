@@ -40,8 +40,8 @@ resources:
       flavor: {get_param: database_flavor}
       image: {get_param: image}
       key_name: {get_param: key}
-      networks: [{network: {get_resource: private_net} }]
-      security_groups: [{ get_resource: db_securitygroup}]
+      networks: [{network: {get_resource: shared_private_net} }]
+      security_groups: [{ get_resource: shared_db_securitygroup}]
       user_data:
         str_replace:
           template: |
@@ -61,17 +61,17 @@ resources:
             EXIT
             EOF
           params:
-            $db_rootpassword: {get_attr: [database_root_password, value]}
+            $db_rootpassword: {get_attr: [shared_database_root_password, value]}
             $db_name: {get_param: database_name}
             $db_user: {get_param: database_user}
-            $db_password: {get_attr: [database_password, value]}
+            $db_password: {get_attr: [shared_database_password, value]}
   v1_webserver:
     type: OS::Nova::Server
     properties:
       flavor: {get_param: flavor}
       image: {get_param: image}
       key_name: {get_param: key}
-      networks: [{port: {get_resource: webserver_port_v1}}]
+      networks: [{port: {get_resource: v1_webserver_port}}]
       user_data:
         str_replace:
           template: |
@@ -150,8 +150,8 @@ resources:
   shared_router_interface:
     type: OS::Neutron::RouterInterface
     properties:
-      router_id: { get_resource: router }
-      subnet_id: { get_resource: private_subnet }
+      router_id: { get_resource: shared_router }
+      subnet_id: { get_resource: shared_private_subnet }
 
 
   v1_webserver_port:
@@ -160,13 +160,13 @@ resources:
       security_groups: [{ get_resource: webserver_securitygroup}]
       network_id: { get_resource: shared_private_net }
       fixed_ips:
-        - subnet_id: { get_resource: private_subnet }
+        - subnet_id: { get_resource: shared_private_subnet }
 
   service_floating_ip:
     type: OS::Neutron::FloatingIP
     properties:
       floating_network: { get_param: external_network_id }
-      port_id: { get_resource: webserver_port_v1 }
+      port_id: { get_resource: v1_webserver_port }
 
 
 
