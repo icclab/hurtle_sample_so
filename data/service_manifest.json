@@ -9,8 +9,8 @@
   "depends_on": [],
   "resources": {
     "RegionOne": {
-      "deployment": "file:///opt/app-root/src/data/deployment.yaml",
-      "provision": "file:///opt/app-root/src/data/provision.yaml"
+      "deployment": "file:///opt/app-root/src/data/wordpress/wordpress_v1.yaml",
+      "provision": "file:///opt/app-root/src/data/wordpress/wordpress_v1.yaml"
     }
   }
 }
