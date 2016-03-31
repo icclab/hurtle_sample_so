@@ -91,8 +91,8 @@ resources:
           params:
             $db_name: {get_param: database_name}
             $db_user: {get_param: database_user}
-            $db_password: {get_attr: [database_password, value]}
-            $db_host: {get_attr: [db, first_address]}
+            $db_password: {get_attr: [shared_database_password, value]}
+            $db_host: {get_attr: [shared_db, first_address]}
 
   shared_private_net:
     type: OS::Neutron::Net
@@ -157,7 +157,7 @@ resources:
   v1_webserver_port:
     type: OS::Neutron::Port
     properties:
-      security_groups: [{ get_resource: webserver_securitygroup}]
+      security_groups: [{ get_resource: shared_webserver_securitygroup}]
       network_id: { get_resource: shared_private_net }
       fixed_ips:
         - subnet_id: { get_resource: shared_private_subnet }
