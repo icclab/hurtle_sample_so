@@ -1,6 +1,7 @@
 from pymongo import MongoClient
 import os
 import sys
+import time
 sys.stdout = sys.stderr
 
 
@@ -28,6 +29,10 @@ def get_mongo_connection():
     db_password = os.environ.get('DB_PASSWORD', 'hurtle')
 
     db_uri = 'mongodb://%s:%s@%s' % (db_user, db_password, db_host)
+
+    # give some time to mongodb...
+    time.sleep(10)
+
     connection = MongoClient(db_uri, int(db_port))
     resources_db = connection.resources_db
     return resources_db.stacks
