@@ -9,8 +9,8 @@
   "depends_on": [],
   "resources": {
     "RegionOne": {
-      "deployment": "file:///Users/merne/dev/hurtle/hurtle_sample_so/data/wordpress/wordpress_v2.yaml",
-      "provision": "file:///Users/merne/dev/hurtle/hurtle_sample_so/data/wordpress/wordpress_v2.yaml"
+      "deployment": "file:///opt/app-root/src/data/wordpress/wordpress_v2.yaml",
+      "provision": "file:///opt/app-root/src/data/wordpress/wordpress_v2.yaml"
     }
   }
 }
