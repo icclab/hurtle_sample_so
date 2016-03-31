@@ -50,8 +50,8 @@ def save_itg(desired):
 
         db.update_one(document_filter, {
             "$set": {
-                "deploy": desired['deploy'],
-                "provision": desired['provision']
+                "deploy": yaml.dump(region['deploy']),
+                "provision": yaml.dump(region['provision'])
             }
         })
 
