@@ -3,6 +3,7 @@ import requests
 import json
 import yaml
 import os
+import time
 import copy
 import urllib2
 from wsgi.mongo import get_mongo_connection
@@ -180,6 +181,17 @@ def update_itg(current, desired):
 
             #TODO: here add some error handling
             deployer.update(identifier=stack_id, template=template_raw, token=token)
+
+            print 'waiting for stack to get ready...'
+            done = False
+            while not done:
+                details = deployer.details(stack_id, token)
+                print 'current state: %s' % details['state']
+                if details['state'] == 'CREATE_COMPLETE' or details['state'] == 'UPDATE_COMPLETE':
+                    done = True
+                else:
+                    time.sleep(3)
+
 
     return True
 
