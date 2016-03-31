@@ -100,7 +100,7 @@ resources:
   shared_private_subnet:
     type: OS::Neutron::Subnet
     properties:
-      network_id: { get_resource: private_net }
+      network_id: { get_resource: shared_private_net }
       cidr: 10.0.0.0/24
       gateway_ip: 10.0.0.1
       allocation_pools:
@@ -158,7 +158,7 @@ resources:
     type: OS::Neutron::Port
     properties:
       security_groups: [{ get_resource: webserver_securitygroup}]
-      network_id: { get_resource: private_net }
+      network_id: { get_resource: shared_private_net }
       fixed_ips:
         - subnet_id: { get_resource: private_subnet }
 
