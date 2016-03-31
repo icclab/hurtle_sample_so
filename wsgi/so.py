@@ -17,6 +17,7 @@ Sample SO.
 """
 
 import os
+import time
 
 from sdk.mcn import util
 from sm.so import service_orchestrator
@@ -103,6 +104,16 @@ class SOEExtn(service_orchestrator.Execution):
                 self.service_manifest['resources'][region]['stack_id'] = \
                     self.service_manifest['resources'][region]['client'].deploy(self.service_manifest['resources'][region]['deployment'], self.token)
                 LOG.info('Stack ID: ' + self.service_manifest['resources'][region]['stack_id'])
+
+                LOG.info('waiting for stack to get ready...')
+                done = False
+                while not done:
+                    details = self.service_manifest['resources'][region]['client'].details(self.service_manifest['resources'][region]['stack_id'], self.token)
+                    LOG.info('current state: %s' % details['state'])
+                    if details['state'] == 'CREATE_COMPLETE' or details['state'] == 'UPDATE_COMPLETE':
+                        done = True
+                    else:
+                        time.sleep(3)
 
                 if self.db:
 
