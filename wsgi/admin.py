@@ -41,7 +41,7 @@ def save_itg(desired):
 
     db = get_mongo_connection()
 
-    for region_name, region in desired:
+    for region_name, region in desired.iteritems():
         document_filter = {
             "_id": region['id'],
             "region": region_name
@@ -128,14 +128,17 @@ def get_desired():
 
 def check_for_updates():
     current = get_current()
-    desired = get_desired()
+    if len(current['itg'].keys()) != 0:
+        desired = get_desired()
 
-    update_itg_if_required(current['itg'], desired['itg'])
-    update_stg_if_required(current['stg'], desired['stg'])
+        update_itg_if_required(current['itg'], desired['itg'])
+        update_stg_if_required(current['stg'], desired['stg'])
 
-    # we pass both as current may contain some old data not yet copied to desired
-    save(desired)
-
+        # we pass both as current may contain some old data not yet copied to desired
+        save(desired)
+    else:
+        # first time we run, we have no current stack...
+        print 'First run, not updating anything...'
 
 def update_itg_if_required(current, desired):
     if not deep_equal(current, desired):
