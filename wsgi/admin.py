@@ -135,6 +135,9 @@ def check_for_updates():
         update_itg_if_required(current['itg'], desired['itg'])
         update_stg_if_required(current['stg'], desired['stg'])
 
+        for region_name in current['itg'].keys():
+            desired['itg'][region_name]['id'] = current['itg'][region_name]['id']
+
         # we pass both as current may contain some old data not yet copied to desired
         save(desired)
     else:
