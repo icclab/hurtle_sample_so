@@ -18,7 +18,7 @@ The following instructions have been verified with the docker image centos:7.
 Start the SO locally with:
 
 	cd hurtle_sample_so
-	OPENSHIFT_PYTHON_DIR=/opt/venv/hurtle/so OPENSHIFT_REPO_DIR=$PWD python ./wsgi/application
+	OPENSHIFT_PYTHON_DIR=/opt/venv/hurtle/so OPENSHIFT_REPO_DIR=$PWD python ./wsgi/application.py
 	
 Optionally you can also set the DESIGN_URI if your OpenStack install is not local.
 
